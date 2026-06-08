@@ -129,8 +129,10 @@ async function handleLogin() {
   try {
     const examId = selectedExamId.value
     const res = await login(examId, idCard.value)
+	console.log(res);
     if (res.code === 0) {
       const data = res.data
+	  
       // 保存登录信息
       saveLoginInfo(data, idCard.value)
       // 根据 paper_status 跳转

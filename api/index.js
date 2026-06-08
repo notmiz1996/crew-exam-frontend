@@ -4,243 +4,75 @@
  * 所有后端 API 统一通过此模块调用。
  * 自动携带 JWT token 到 Authorization 请求头。
  * 统一处理响应格式 { code, data, message }。
- *
- * ==================== MOCK 模式 ====================
- * Mock 数据直接内置在此文件中，前端独立调试用。
- * 变量 IS_MOCK = true → 使用 Mock 数据（默认开启）
- * 后端搭好后，将 IS_MOCK 改为 false 即可切回真实 API。
  */
 
-// ==================== Mock 开关 ====================
-const IS_MOCK = true    // ← true = 使用模拟数据，false = 走真实后端
+// ==================== API 基础地址 ====================
+// 开发环境：通过 proxy 转发到 Django 后端
+// 生产环境：改为完整地址，如 'https://exam.example.com/api'
+const API_BASE_URL = 'http://192.168.11.168:8000/api'
 
-// ==================== Mock 数据 ====================
-
-const mockExams = [
-  {
-    id: 1,
-    name: '肇庆市船员履职技能大赛理论知识竞赛',
-    start_time: '2026-06-10T09:00:00',
-    end_time: '2026-06-30T12:00:00',
-    duration_minutes: 120
-  }
-]
-
-function generateMockPaper() {
-  return {
-    paper_id: 101,
-    status: 'in_progress',
-    total_count: 5,
-    duration_seconds: 7200,
-    remaining_seconds: 7100,
-    questions: [
-      {
-        id: 1, sort_order: 1, question_type: 'single_choice',
-        stem: '根据《中华人民共和国内河交通安全管理条例》，船舶在内河航行时，应当如何显示号灯？',
-        options: ['A. 仅显示航行灯', 'B. 显示号灯、号型', 'C. 仅显示桅灯', 'D. 不需要显示号灯'],
-        score: 1, selected_answer: null
-      },
-      {
-        id: 2, sort_order: 2, question_type: 'single_choice',
-        stem: '船舶在能见度不良的情况下航行，应当使用什么声号？',
-        options: ['A. 一短声', 'B. 两短声', 'C. 一长声', 'D. 一长两短声'],
-        score: 1, selected_answer: null
-      },
-      {
-        id: 3, sort_order: 3, question_type: 'multi_choice',
-        stem: '以下哪些属于船舶防污染设备？（多选）',
-        options: ['A. 油水分离器', 'B. 生活污水处理装置', 'C. 焚烧炉', 'D. 空调系统'],
-        score: 2, selected_answer: null
-      },
-      {
-        id: 4, sort_order: 4, question_type: 'judgment',
-        stem: '船舶在航行中，值班驾驶员可以离开驾驶台去餐厅就餐。',
-        options: ['正确', '错误'],
-        score: 1, selected_answer: null
-      },
-      {
-        id: 5, sort_order: 5, question_type: 'single_choice',
-        stem: '根据规定，内河船舶在掉头前应当在多少米外显示掉头信号？',
-        options: ['A. 100米', 'B. 200米', 'C. 300米', 'D. 500米'],
-        score: 1, selected_answer: null
-      },
-	  {
-	    id: 6, sort_order: 6, question_type: 'single_choice',
-	    stem: '根据《中华人民共和国内河交通安全管理条例》，船舶在内河航行时，应当如何显示号灯？',
-	    options: ['A. 仅显示航行灯', 'B. 显示号灯、号型', 'C. 仅显示桅灯', 'D. 不需要显示号灯'],
-	    score: 1, selected_answer: null
-	  },
-	  {
-	    id: 7, sort_order: 7, question_type: 'single_choice',
-	    stem: '船舶在能见度不良的情况下航行，应当使用什么声号？',
-	    options: ['A. 一短声', 'B. 两短声', 'C. 一长声', 'D. 一长两短声'],
-	    score: 1, selected_answer: null
-	  },
-	  {
-	    id: 8, sort_order: 8, question_type: 'multi_choice',
-	    stem: '以下哪些属于船舶防污染设备？（多选）',
-	    options: ['A. 油水分离器', 'B. 生活污水处理装置', 'C. 焚烧炉', 'D. 空调系统'],
-	    score: 2, selected_answer: null
-	  },
-	  {
-	    id: 9, sort_order: 9, question_type: 'judgment',
-	    stem: '船舶在航行中，值班驾驶员可以离开驾驶台去餐厅就餐。',
-	    options: ['正确', '错误'],
-	    score: 1, selected_answer: null
-	  },
-	  {
-	    id: 10, sort_order:10 , question_type: 'single_choice',
-	    stem: '根据规定，内河船舶在掉头前应当在多少米外显示掉头信号？',
-	    options: ['A. 100米', 'B. 200米', 'C. 300米', 'D. 500米'],
-	    score: 1, selected_answer: null
-	  }
-    ]
-  }
-}
-
-// ==================== Mock 状态存储 ====================
-
-// key = paperId, value = { pqId: answer }
-const mockAnswerStore = {}
-// key = paperId, value = { status, remaining_seconds, answered_count }
-const mockStatusStore = {}
-
-function initMockPaper() {
-  const paperId = 101
-  if (!mockAnswerStore[paperId]) mockAnswerStore[paperId] = {}
-  if (!mockStatusStore[paperId]) {
-    mockStatusStore[paperId] = {
-      status: 'in_progress',
-      remaining_seconds: 3600,
-      answered_count: 0,
-      total_count: 10
-    }
-  }
-  return paperId
-}
-
-/** 模拟网络延迟（200~500ms） */
-function delay() {
-  return new Promise((resolve) => setTimeout(resolve, 200 + Math.random() * 300))
-}
-
-// ==================== Mock 处理函数 ====================
-
-async function mockGetExamList() {
-  await delay()
-  return { code: 0, data: mockExams, message: '' }
-}
-
-async function mockLogin(idCard) {
-  await delay()
-  // 特殊身份证号 441202199001011234 或以 1 开头 → 有效
-  if (idCard !== '441202199001011234' && !idCard.startsWith('1')) {
-    return { code: 1001, data: null, message: '该身份证号未在本场考试考生名单中' }
-  }
-  return {
-    code: 0,
-    data: {
-      token: 'mock_token_' + Date.now(),
-      candidate_name: '张三',
-      exam_id: 1,
-      paper_status: 'in_progress',
-      expires_at: '2026-06-30T12:30:00'
-    },
-    message: ''
-  }
-}
-
-async function mockGetPaper() {
-  await delay()
-  const paperId = initMockPaper()
-  const paper = generateMockPaper()
-
-  // 恢复已答记录
-  const answers = mockAnswerStore[paperId]
-  paper.questions.forEach((q) => {
-    if (answers[q.id] !== undefined) {
-      q.selected_answer = answers[q.id]
-    }
-  })
-
-  // 如果已交卷，返回 1004
-  if (mockStatusStore[paperId].status === 'finished') {
-    return { code: 1004, data: null, message: '已交卷，不可操作' }
-  }
-
-  return { code: 0, data: paper, message: '' }
-}
-
-async function mockSubmitAnswer(pqId, selectedAnswer) {
-  await delay()
-  const paperId = initMockPaper()
-  mockAnswerStore[paperId][pqId] = selectedAnswer
-
-  // 更新已答数量
-  const answered = Object.values(mockAnswerStore[paperId]).filter(v => v).length
-  mockStatusStore[paperId].answered_count = answered
-
-  return {
-    code: 0,
-    data: { question_id: pqId, selected_answer: selectedAnswer, saved: true },
-    message: ''
-  }
-}
-
-async function mockGetPaperStatus() {
-  await delay()
-  const paperId = initMockPaper()
-  const st = mockStatusStore[paperId]
-  return {
-    code: 0,
-    data: {
-      status: st.status,
-      remaining_seconds: Math.max(0, st.remaining_seconds),
-      answered_count: st.answered_count || 0,
-      total_count: st.total_count
-    },
-    message: ''
-  }
-}
-
-async function mockSubmitExam() {
-  await delay()
-  const paperId = initMockPaper()
-  const st = mockStatusStore[paperId]
-  if (st.status === 'finished') {
-    return { code: 1004, data: null, message: '已交卷，不可操作' }
-  }
-  st.status = 'finished'
-  const answers = mockAnswerStore[paperId] || {}
-  const answered = Object.values(answers).filter(v => v).length
-  return { code: 0, data: { total_score: answered * 1 }, message: '' }
-}
-
-async function mockGetResult() {
-  await delay()
-  const paperId = initMockPaper()
-  const st = mockStatusStore[paperId]
-  if (st.status !== 'finished') {
-    return { code: 1010, data: null, message: '考试尚未结束，无法查看成绩' }
-  }
-  const answers = mockAnswerStore[paperId] || {}
-  const answered = Object.values(answers).filter(v => v).length
-  return {
-    code: 0,
-    data: { total_score: answered * 1, submitted_at: new Date().toISOString() },
-    message: ''
-  }
-}
-
-// ==================== 真实请求底层 ====================
-
+/**
+ * 获取存储的 token
+ */
 function getToken() {
-  try { return uni.getStorageSync('exam_token') || '' } catch { return '' }
+  try {
+    return uni.getStorageSync('exam_token') || ''
+  } catch {
+    return ''
+  }
 }
 
-function realRequest(method, path, data = null, auth = false) {
+/**
+ * 获取存储的 exam_id
+ */
+function getExamId() {
+  try {
+    return uni.getStorageSync('exam_id') || ''
+  } catch {
+    return ''
+  }
+}
+
+// ==================== 错误码 → 中文提示映射 ====================
+const ERROR_MAP = {
+  1000: '请求参数不合法',
+  1001: '该身份证号未在本场考试考生名单中',
+  1002: '身份证号格式不正确',
+  1003: '该考生已在其他设备登录',
+  1004: '考试时间已结束',
+  1005: '未登录或 token 已过期',
+  1006: '考试不存在或不在有效期内',
+  1007: '试卷状态异常',
+  1008: '答案提交失败',
+  1009: '交卷失败，请重试',
+  1010: '成绩查询失败',
+  1011: '考试尚未结束',
+  NETWORK_ERROR: '网络连接失败，请检查网络或后端服务是否启动',
+  TIMEOUT: '请求超时，请稍后重试',
+}
+
+/**
+ * 统一错误提示
+ */
+function getErrorMessage(code) {
+  return ERROR_MAP[code] || `系统错误（${code}）`
+}
+
+// ==================== 通用请求方法 ====================
+
+/**
+ * 通用请求方法
+ * @param {string} method - HTTP 方法
+ * @param {string} path   - 路径（不含 API_BASE_URL，如 '/exams/'）
+ * @param {object|null} data   - 请求体
+ * @param {boolean} auth  - 是否需要 JWT 认证
+ * @returns {Promise<{code: number, data: any, message: string}>}
+ */
+function request(method, path, data = null, auth = false) {
   return new Promise((resolve, reject) => {
-    const header = { 'Content-Type': 'application/json' }
+    const header = {}
+
+    // 需要认证时，自动携带 token
     if (auth) {
       const token = getToken()
       if (!token) {
@@ -249,61 +81,132 @@ function realRequest(method, path, data = null, auth = false) {
       }
       header['Authorization'] = `Bearer ${token}`
     }
-    uni.request({
-      url: `/api${path}`,
+
+    const requestUrl = `${API_BASE_URL}${path}`
+
+    // 构建请求参数
+    const requestOptions = {
+      url: requestUrl,
       method,
       header,
-      data: data ? JSON.stringify(data) : undefined,
+    }
+
+    // 只有 POST 请求才发 JSON body
+    if (method === 'POST' && data !== null) {
+      header['Content-Type'] = 'application/json'
+      requestOptions.data = JSON.stringify(data)
+    }
+
+    uni.request({
+      ...requestOptions,
       success: (res) => {
-        if (res.statusCode === 200 || res.statusCode === 201) {
+        console.log('[API]', method, requestUrl, res.statusCode, res.data)
+
+        if (res.statusCode >= 200 && res.statusCode < 300) {
           const body = res.data
-          resolve(body && typeof body.code === 'number'
-            ? body
-            : { code: 0, data: body, message: '' })
-        } else if (res.statusCode === 401 || res.statusCode === 403) {
-          resolve({ code: 1005, message: '登录已过期，请重新登录' })
+          if (body && typeof body.code === 'number') {
+            if (body.code === 0) {
+              resolve(body)
+            } else {
+              const message = body.message || getErrorMessage(body.code)
+              console.warn('[API] 业务错误', method, requestUrl, body.code, message)
+              reject({ code: body.code, message })
+            }
+          } else {
+            resolve({ code: 0, data: body, message: '' })
+          }
+        } else if (res.statusCode === 401) {
+          const message = '登录已过期，请重新登录'
+          uni.removeStorageSync('exam_token')
+          uni.removeStorageSync('exam_id')
+          reject({ code: 1005, message })
+        } else if (res.statusCode === 403) {
+          reject({ code: 1005, message: '没有权限访问' })
+        } else if (res.statusCode === 404) {
+          reject({ code: 1006, message: '接口地址不存在，请检查后端路由配置' })
+        } else if (res.statusCode === 500) {
+          reject({ code: 1000, message: '服务器内部错误，请联系管理员' })
         } else {
-          resolve({ code: -1, data: null, message: `请求失败 (${res.statusCode})` })
+          reject({ code: 1000, message: `请求失败（${res.statusCode}）` })
         }
       },
-      fail: (err) => reject({ code: -1, message: '网络连接失败', detail: err })
+      fail: (err) => {
+        console.error('[API] 网络错误', method, requestUrl, err)
+        const message = err.errMsg?.includes('timeout')
+          ? ERROR_MAP.TIMEOUT
+          : ERROR_MAP.NETWORK_ERROR
+        reject({ code: -1, message })
+      }
     })
   })
 }
 
-// ==================== 导出 API 方法 ====================
+// ==================== API 接口 ====================
 
+/**
+ * 1️⃣ 获取考试列表（公开，无需登录）
+ * GET  /api/exams/
+ */
 export function getExamList() {
-  if (IS_MOCK) return mockGetExamList()
-  return realRequest('GET', '/exams/')
+  return request('GET', '/exams/')
 }
 
-export function login(examId, idCard) {
-  if (IS_MOCK) return mockLogin(idCard)
-  return realRequest('POST', `/exams/${examId}/login/`, { id_card: idCard })
+/**
+ * 2️⃣ 考生登录（公开，无需 JWT）
+ * POST /api/exams/{exam_id}/login/
+ * @param {number} exam_id  - 考试 ID（放路径中）
+ * @param {string} id_card  - 身份证号
+ * @param {string} name     - 考生姓名（可选）
+ */
+export function login(exam_id, id_card, name = '') {
+  const body = { id_card }
+  if (name) body.name = name
+  return request('POST', `/exams/${exam_id}/login/`, body)
 }
 
-export function getPaper(examId) {
-  if (IS_MOCK) return mockGetPaper()
-  return realRequest('GET',`/exams/${examId}/paper/`, null, true)
+/**
+ * 3️⃣ 获取试卷（需登录）
+ * GET  /api/exams/{exam_id}/paper/
+ * @param {number} exam_id - 考试 ID
+ */
+export function getPaper(exam_id) {
+  return request('GET', `/exams/${exam_id}/paper/`, null, true)
 }
 
-export function submitAnswer(examId, pqId, selectedAnswer) {
-  if (IS_MOCK) return mockSubmitAnswer(pqId, selectedAnswer)
-  return realRequest('POST', `/exams/${examId}/paper-questions/${pqId}/answer/`, { selected_answer: selectedAnswer }, true)
+/**
+ * 4️⃣ 提交答案（需登录）
+ * POST /api/exams/{exam_id}/paper-questions/{pq_id}/answer/
+ * @param {number} exam_id - 考试 ID
+ * @param {number} pq_id   - 试卷题目 ID
+ * @param {string} answer  - 答案（如 "A" 或 "A,B,C"）
+ */
+export function submitAnswer(exam_id, pq_id, answer) {
+  return request('POST', `/exams/${exam_id}/paper-questions/${pq_id}/answer/`, { answer }, true)
 }
 
-export function getPaperStatus(examId) {
-  if (IS_MOCK) return mockGetPaperStatus()
-  return realRequest('GET', `/exams/${examId}/paper/status/`, null, true)
+/**
+ * 5️⃣ 获取考试状态，轮询用（需登录）
+ * GET  /api/exams/{exam_id}/paper/status/
+ * @param {number} exam_id - 考试 ID
+ */
+export function getPaperStatus(exam_id) {
+  return request('GET', `/exams/${exam_id}/paper/status/`, null, true)
 }
 
-export function submitExam(examId) {
-  if (IS_MOCK) return mockSubmitExam()
-  return realRequest('POST', `/exams/${examId}/submit/`, null, true)
+/**
+ * 6️⃣ 交卷（需登录）
+ * POST /api/exams/{exam_id}/submit/
+ * @param {number} exam_id - 考试 ID
+ */
+export function submitExam(exam_id) {
+  return request('POST', `/exams/${exam_id}/submit/`, {}, true)
 }
 
-export function getResult(examId) {
-  if (IS_MOCK) return mockGetResult()
-  return realRequest('GET', `/exams/${examId}/result/`, null, true)
+/**
+ * 7️⃣ 获取考试成绩（需登录）
+ * GET  /api/exams/{exam_id}/result/
+ * @param {number} exam_id - 考试 ID
+ */
+export function getResult(exam_id) {
+  return request('GET', `/exams/${exam_id}/result/`, null, true)
 }

@@ -481,7 +481,9 @@
 
 	async function saveAnswerToServer(pqId, answer) {
 		try {
+			console.log("保存答案提交的数据：",examId.value, pqId, answer);
 			const res = await submitAnswer(examId.value, pqId, answer)
+			
 			if (res.code === 0) {
 				const q = questions.value.find((item) => item.id === pqId)
 				if (q) q.selected_answer = answer
