@@ -152,6 +152,32 @@ export function getExamList() {
 }
 
 /**
+ * 验证考生身份证号，返回考生信息和待考考试列表
+ * POST /api/candidates/verify/
+ */
+export function verifyCandidate(data) {
+  return new Promise((resolve, reject) => {
+    uni.request({
+      url: `${API_BASE_URL}/candidates/verify/`,
+      method: 'POST',
+      data,
+      success: (res) => {
+        if (res.statusCode === 200) {
+          resolve({ code: 0, data: res.data })
+        } else {
+          // 把 HTTP 状态码和错误数据抛出去，让页面 catch 里处理
+          reject({ code: res.statusCode, data: res.data, message: res.data?.error || '请求失败' })
+        }
+      },
+      fail: (err) => {
+        reject({ code: -1, message: '网络连接失败', data: null })
+      }
+    })
+  })
+}
+
+
+/**
  * 2️⃣ 考生登录（公开，无需 JWT）
  * POST /api/exams/{exam_id}/login/
  * @param {number} exam_id  - 考试 ID（放路径中）
