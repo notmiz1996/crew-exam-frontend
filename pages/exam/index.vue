@@ -3,8 +3,11 @@
 		<!-- ========== 顶部信息栏 ========== -->
 		<view class="exam-header">
 			<view class="header-left">
-				<text class="header-name">姓名：{{ candidateName }}</text>
-				<text class="header-id">身份证：{{ maskedIdCard }}</text>
+				<image src="/static/logo.png" mode="aspectFit" class="header-logo"></image>
+				<view class="header-info">
+					<view class="header-name">姓名：{{ candidateName }}</view>
+					<view class="header-id">身份证：{{ maskedIdCard }}</view>
+				</view>
 			</view>
 			<view class="header-right">
 				<text class="header-count">已答 {{ answeredCount }}/{{ totalCount }} 题</text>
@@ -38,7 +41,7 @@
 						<view class="option-radio">
 							<view class="radio-dot" v-if="getSelectedAnswer() === getOptionLetter(idx)"></view>
 						</view>
-						<text class="option-text">{{ opt }}</text>
+						<text class="option-text">{{ cleanOptionText(opt) }}</text>
 					</view>
 				</view>
 				<view v-else-if="currentQuestion.question_type === 'multi_choice'" class="options-list">
@@ -48,7 +51,7 @@
 						<view class="option-checkbox">
 							<text class="checkbox-mark" v-if="isMultiSelected(getOptionLetter(idx))">✓</text>
 						</view>
-						<text class="option-text">{{ opt }}</text>
+						<text class="option-text">{{ cleanOptionText(opt) }}</text>
 					</view>
 				</view>
 				<view v-else-if="currentQuestion.question_type === 'judgment'" class="options-list">
@@ -430,6 +433,17 @@
 	function getOptionLetter(index) {
 		return String.fromCharCode(65 + index)
 	}
+	
+	/**
+	  * 去掉选项文本中可能带有的 "A." "B." "C." 等前缀
+	  * 正则匹配：行首大写字母 + 点号 + 可选空格
+	  * 例如 "B. 北京" → "北京"，"D.上海" → "上海"
+	*/
+	function cleanOptionText(text) {
+		if (!text) return ''
+		return text.replace(/^[A-Z]\.\s*/, '')
+	}
+	
 
 	function selectOption(letter) {
 		const q = currentQuestion.value
@@ -585,11 +599,11 @@
 			if (res.code === 0) {
 				const score = res.data.total_score
 				submitStep.value = 0
-				uni.showToast({
-					title: `交卷成功！得分：${score}分`,
-					icon: 'success',
-					duration: 2000
-				})
+				// uni.showToast({
+				// 	title: `交卷成功！得分：${score}分`,
+				// 	icon: 'success',
+				// 	duration: 2000
+				// })
 				stopPolling()
 				setTimeout(() => {
 					uni.redirectTo({
@@ -675,17 +689,27 @@
 
 	.header-left {
 		display: flex;
-		flex-direction: column;
+		flex-direction: row;
 		gap: 4rpx;
 	}
-
+	
+	.header-logo{
+		height: 100rpx;
+		width: 100rpx;
+	}
+	
+	.header-info{
+		padding-top: 5px;
+		margin-left: 10px;
+	}
+	
 	.header-name {
 		font-size: 26rpx;
 		font-weight: 600;
 	}
 
 	.header-id {
-		font-size: 22rpx;
+		font-size: 26rpx;
 		opacity: 0.85;
 	}
 

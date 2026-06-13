@@ -12,7 +12,7 @@
 			<view v-if="!isShowExamList" class="login-section card">
 				<text class="section-title">考生信息</text>
 				<view class="form-group">
-					<text class="form-label">身份证号</text>
+					<!-- <text class="form-label">身份证号</text> -->
 					<input class="form-input" type="text" v-model="idCard" placeholder="请输入18位身份证号" maxlength="18"
 						@input="onIdCardInput" />
 					<text class="form-hint" v-if="idCard && !isIdCardValid">
@@ -39,10 +39,10 @@
 				<!-- 加载中 -->
 				<view v-if="loading" class="loading-text">正在加载考试列表...</view>
 				<!-- 无考试 -->
-				<view v-else-if="examList.length === 0" class="empty-state">
-					<text class="empty-icon">📋</text>
-					<text class="empty-text">当前没有可参加的考试</text>
-					<text class="empty-hint">请联系管理员确认考试配置</text>
+				<view v-if="examList.length === 0" class="empty-state">
+				  <text class="empty-icon">📋</text>
+				  <text class="empty-text">当前没有可参加的考试</text>
+				  <text class="empty-hint">请联系管理员确认考试配置</text>
 				</view>
 				<!-- 考试列表 -->
 				<view v-else class="exam-list">
@@ -254,7 +254,7 @@ function formatTime(isoStr) {
 		height: 100vh;
 
 		/* 🖼️ 背景图铺满全屏 */
-		background-image: url('@/static/index-bg.png');
+		background-image: url('@/static/index-bg.jpg');
 		background-size: contain;
 		background-size: 100vw 100vh;
 		background-position: center;
@@ -298,8 +298,8 @@ function formatTime(isoStr) {
 	/* ========== 居中的卡片内容区 ========== */
 	.center-area {
 		width: 100%;
-		max-width: 900rpx;
-		margin-top: 250px;
+		max-width: 500px;
+		margin-top: 190px;
 		padding: 0 30rpx;
 		/* flex 让里面的卡片自然排列，不需要额外居中 */
 	}

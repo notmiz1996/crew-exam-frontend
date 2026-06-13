@@ -9,7 +9,7 @@
 // ==================== API 基础地址 ====================
 // 开发环境：通过 proxy 转发到 Django 后端
 // 生产环境：改为完整地址，如 'https://exam.example.com/api'
-const API_BASE_URL = 'http://127.0.0.1:8000/api'
+const API_BASE_URL = 'http://192.168.1.100:8000/api'
 
 /**
  * 获取存储的 token
